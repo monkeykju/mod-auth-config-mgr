@@ -23,7 +23,7 @@ public class AuthManagerByMySQL extends BusModBase {
 	private static final long DEFAULT_SESSION_TIMEOUT = 30 * 60 * 1000;
 
 	static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
-	static final String DB_URL = "jdbc:mysql://localhost/";
+	private String DB_URL = "jdbc:mysql://";
 
 	private String address;
 	private String database;
@@ -31,8 +31,8 @@ public class AuthManagerByMySQL extends BusModBase {
 	private long sessionTimeout;
 	private String usernameDB;
 	private String passwordDB;
-	private Connection conn;
-
+	private String host;
+	private String port;
 	private static final class LoginInfo {
 		final long timerID;
 		final String sessionID;
@@ -51,8 +51,10 @@ public class AuthManagerByMySQL extends BusModBase {
 		this.database = getOptionalStringConfig("database", "auth_db");
 		this.usernameDB = getOptionalStringConfig("username_db", "root");
 		this.passwordDB = getOptionalStringConfig("password_db", "");
+		this.host = getOptionalStringConfig("host", "localhost");
+		this.port = getOptionalStringConfig("port", "3306");
+		DB_URL += this.host + ":" + this.port + "/";
 		
-
 			Number timeout = config.getNumber("session_timeout");
 			if (timeout != null) {
 				if (timeout instanceof Long) {

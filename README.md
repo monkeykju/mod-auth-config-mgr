@@ -10,11 +10,11 @@ This busmod, is used in the web application tutorial to handle simple user/passw
 
 ## Dependencies
 
-This busmod requires a MongoDB persistor busmod to be running to allow searching for usernames and passwords.
+This busmod requires a JDBC with MySQL Driver to be running to allow searching for usernames and passwords.
 
 ## Name
 
-The module name is `auth-mgr`.
+The module name is `auth-mysql`.
 
 ## Configuration
 
@@ -22,25 +22,32 @@ This busmod takes the following configuration:
 
     {
         "address": <address>,
-        "user_collection": <user_collection>,
-        "persistor_address": <persistor_address>,
+        "host": <MySQL_host>,
+        "port": <MySQL_port>,
+        "database": <database_of_mysql>,
+        "users_table": <users_table>,
+        "username": <username_of_mysql>
+        "password": <password_of_mysql>
         "session_timeout": <session_timeout>   
     }
     
 For example:
 
     {
-        "address": "test.my_authmgr",
-        "user_collection": "users",
-        "persistor_address": "test.my_persistor",
-        "session_timeout": 900000
+       "address": "test.auth",
+        "host": "localhost",
+        "port": "3306",
+        "database": "auth_db",
+        "users_table": "users",
+        "username": "root",
+        "password": "abc123",
+        "session_timeout": 900000 
     }        
     
 Let's take a look at each field in turn:
 
 * `address` The main address for the busmod. Optional field. Default value is `vertx.basicauthmanager`
-* `user_collection` The MongoDB collection in which to search for usernames and passwords. Optional field. Default value is `users`.
-* `persistor_address` Address of the persistor busmod to use for usernames and passwords. This field is optional. Default value is `vertx.mongopersistor`.
+* `users_table` The MySQL table in which to search for usernames and passwords. Optional field. Default value is `users`.
 * `session_timeout` Timeout of a session, in milliseconds. This field is optional. Default value is `1800000` (30 minutes).
 
 ## Operations
