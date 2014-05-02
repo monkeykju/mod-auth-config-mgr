@@ -384,12 +384,56 @@ public class ClientTest extends TestVerticle {
 	
 	@Test
 	public void testLoginMoreThanOnce() throws Exception{
+		deleteAll();
+		JsonObject json = new JsonObject();
+		json.putString("username", "tim");
+		json.putString("password", "foo");
+		storeEntries(json);
 		
+		eb.send("test.auth.login", json, new Handler<Message<JsonObject>>() {
+			
+			@Override
+			public void handle(Message<JsonObject> reply) {
+				assertEquals("ok", reply.body().getString("status"));
+				testComplete();
+			}
+		} );
 	}
 	
 	@Test
 	public void testLoginMoreThanOnceThenLogout() throws Exception{
+		deleteAll();
+		JsonObject json = new JsonObject();
+		json.putString("username", "tim");
+		json.putString("password", "foo");
+		storeEntries(json);
 		
+		eb.send("test.auth.login", json, new Handler<Message<JsonObject>>() {
+			
+			@Override
+			public void handle(Message<JsonObject> reply) {
+				assertEquals("ok", reply.body().getString("status"));
+				session = reply.body().getString("sessionID");
+				JsonObject json = new JsonObject();
+				json.putString("username", "tim");
+				json.putString("password", "foo");				
+				eb.send("test.auth.login", json, new Handler<Message<JsonObject>>() {					
+					@Override
+					public void handle(Message<JsonObject> reply) {
+						assertEquals("ok", reply.body().getString("status"));
+						JsonObject logout = new JsonObject();
+						logout.putString("sessionID", reply.body().getString("sessionID"));
+						eb.send("test.auth.logout",logout, new Handler<Message<JsonObject>>() {							
+							@Override
+							public void handle(Message<JsonObject> reply) {
+								assertEquals("ok", reply.body().getString("status"));	
+								testComplete();
+							}
+						});
+					}
+				} );
+			}
+		} );
 	}
 	
 }
