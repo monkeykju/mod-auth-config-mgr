@@ -63,8 +63,10 @@ repositories {
 dependencies {
   provided "io.vertx:vertx-core:$vertxVersion"
   provided "io.vertx:vertx-platform:$vertxVersion"
+  provided "mysql:mysql-connector-java:5.1.30"
   testCompile "junit:junit:$junitVersion"
   testCompile "io.vertx:testtools:$toolsVersion"
+  testCompile "mysql:mysql-connector-java:5.1.30"
 }
 
 // This sets up the classpath for the script itself
@@ -84,6 +86,7 @@ buildscript {
   dependencies {
     classpath "io.vertx:vertx-core:$vertxVersion"
     classpath "io.vertx:vertx-platform:$vertxVersion"
+    classpath "mysql:mysql-connector-java:5.1.30"
   }
 }
 

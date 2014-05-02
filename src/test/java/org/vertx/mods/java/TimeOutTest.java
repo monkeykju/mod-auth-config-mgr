@@ -37,7 +37,6 @@ public class TimeOutTest extends TestVerticle {
 		authConfig.putString("username_db", "root");
 		authConfig.putString("password_db", "JHJD89373");
 		authConfig.putNumber("session_timeout", 200);
-		System.out.println(System.getProperty("vertx.modulename"));
 		container.deployModule(System.getProperty("vertx.modulename"),
 				authConfig, 1, new AsyncResultHandler<String>() {
 					@Override
