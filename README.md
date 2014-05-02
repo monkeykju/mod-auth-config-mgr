@@ -1,6 +1,6 @@
 # Authentication/Authorisation Manager
 
-This is a basic auth manager that verifies usernames and passwords in a MongoDB database and generates time-limited session ids. These session ids can be passed around the event bus.
+This is a basic auth manager that verifies usernames and passwords in a MySQL database and generates time-limited session ids. These session ids can be passed around the event bus.
 
 The auth manager can also authorise a session id. This allows session ids to be passed around the event bus and validated if particular busmods want to find out if the user is authorised.
 
