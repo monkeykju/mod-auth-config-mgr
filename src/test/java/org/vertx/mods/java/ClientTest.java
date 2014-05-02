@@ -28,7 +28,8 @@ public class ClientTest extends TestVerticle {
 	// Database credentials
 	static final String USER = "root";
 	static final String PASS = "JHJD89373";
-	String session = "";
+	public String session = "";
+	public String new_session = "";
 
 	@Override
 	public void start() {
@@ -395,7 +396,61 @@ public class ClientTest extends TestVerticle {
 			@Override
 			public void handle(Message<JsonObject> reply) {
 				assertEquals("ok", reply.body().getString("status"));
-				testComplete();
+				session = reply.body().getString("sessionID");
+				JsonObject auth = new JsonObject();
+				auth.putString("username", "tim");
+				auth.putString("password", "foo");
+				eb.send("test.auth.login", auth, new Handler<Message<JsonObject>>() {
+					
+					@Override
+					public void handle(Message<JsonObject> reply) {
+						assertEquals("ok", reply.body().getString("status"));
+						new_session = reply.body().getString("sessionID");
+						assertTrue(new_session != session);
+						JsonObject user1 = new JsonObject();
+						user1.putString("sessionID", session);
+						eb.send("test.auth.logout", user1, new Handler<Message<JsonObject>>() {							
+							@Override
+							public void handle(Message<JsonObject> reply) {
+								assertEquals("error", reply.body().getString("status"));
+								assertEquals("Not logged in", reply.body().getString("message"));
+								JsonObject user1 = new JsonObject();
+								user1.putString("sessionID", session);
+								eb.send("test.auth.authorise",user1,new Handler<Message<JsonObject>>() {									
+									@Override
+									public void handle(Message<JsonObject> reply) {									
+										assertEquals("denied", reply.body().getString("status"));
+										JsonObject user2 = new JsonObject();
+										user2.putString("sessionID", new_session);
+										eb.send("test.auth.authorise",user2, new Handler<Message<JsonObject>>() {											
+											@Override
+											public void handle(Message<JsonObject> reply) {
+												assertEquals("ok", reply.body().getString("status"));
+												JsonObject user2 = new JsonObject();
+												user2.putString("sessionID", new_session);
+												eb.send("test.auth.logout",user2, new Handler<Message<JsonObject>>() {							
+													@Override
+													public void handle(Message<JsonObject> reply) {
+														assertEquals("ok", reply.body().getString("status"));	
+														JsonObject user2 = new JsonObject();
+														user2.putString("sessionID", new_session);
+														eb.send("test.auth.authorise", user2, new Handler<Message<JsonObject>>() {														
+															@Override
+															public void handle(Message<JsonObject> reply) {
+																assertEquals("denied", reply.body().getString("status"));
+																testComplete();
+															}
+														});
+													}
+												});
+											}
+										});
+									}
+								});
+							}
+						});
+					}
+				});
 			}
 		} );
 	}
