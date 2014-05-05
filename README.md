@@ -16,6 +16,15 @@ This busmod requires a JDBC with MySQL Driver to be running to allow searching f
 
 The module name is `auth-mysql`.
 
+## Users table
+Structure of users table in MySQL:
+
+    users(
+        username varchar(50) primary key,
+        password varchar(50)
+    )
+    
+
 ## Configuration
 
 This busmod takes the following configuration:
