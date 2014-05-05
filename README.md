@@ -58,6 +58,12 @@ Let's take a look at each field in turn:
 * `address` The main address for the busmod. Optional field. Default value is `vertx.basicauthmanager`
 * `users_table` The MySQL table in which to search for usernames and passwords. Optional field. Default value is `users`.
 * `session_timeout` Timeout of a session, in milliseconds. This field is optional. Default value is `1800000` (30 minutes).
+* `host` The MySQL host. Default value is `localhost`
+* `port` The port of listening MySQL server. Default value is `3306`
+* `database` The database has the table save information such as username, password. Default is `auth_db`
+* `username` The username of MySQL database. Default value is `root`
+* `password` The password of MySQL database. There is not default value.
+
 
 ## Operations
 
