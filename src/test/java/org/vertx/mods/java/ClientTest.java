@@ -39,7 +39,7 @@ public class ClientTest extends TestVerticle {
 		authConfig.putString("users_table", "users");
 		authConfig.putString("database", "auth_db");
 		authConfig.putString("username_db", "root");
-		authConfig.putString("password_db", "JHJD89373");
+		authConfig.putString("password_db", "");
 		authConfig.putNumber("session_timeout", 900000);
 		// System.out.println(System.getProperty("vertx.modulename"));
 		container.deployModule(System.getProperty("vertx.modulename"),
