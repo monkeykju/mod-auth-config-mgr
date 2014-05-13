@@ -7,10 +7,8 @@ import java.util.UUID;
 import org.vertx.java.busmods.BusModBase;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 
-import java.sql.*;
 
 public class AuthManagerByMySQL extends BusModBase {
 	private Handler<Message<JsonObject>> loginHandler;
@@ -22,17 +20,11 @@ public class AuthManagerByMySQL extends BusModBase {
 
 	private static final long DEFAULT_SESSION_TIMEOUT = 30 * 60 * 1000;
 
-	static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
-	private String DB_URL = "jdbc:mysql://";
-
 	private String address;
-	private String database;
 	private String table;
+	private String persistorAddress;
 	private long sessionTimeout;
-	private String usernameDB;
-	private String passwordDB;
-	private String host;
-	private String port;
+	
 	private static final class LoginInfo {
 		final long timerID;
 		final String sessionID;
@@ -45,16 +37,9 @@ public class AuthManagerByMySQL extends BusModBase {
 
 	public void start() {
 		super.start();
-		this.address = getOptionalStringConfig("address",
-				"vertx.basicauthmanager");
+		this.address = getOptionalStringConfig("address","vertx.basicauthmanager");
 		this.table = getOptionalStringConfig("users_table", "users");
-		this.database = getOptionalStringConfig("database", "auth_db");
-		this.usernameDB = getOptionalStringConfig("username_db", "root");
-		this.passwordDB = getOptionalStringConfig("password_db", "");
-		this.host = getOptionalStringConfig("host", "localhost");
-		this.port = getOptionalStringConfig("port", "3306");
-		DB_URL += this.host + ":" + this.port + "/";
-		
+		this.persistorAddress = getOptionalStringConfig("persistor_address", "campudus.asyncdbs");		
 			Number timeout = config.getNumber("session_timeout");
 			if (timeout != null) {
 				if (timeout instanceof Long) {
@@ -72,7 +57,6 @@ public class AuthManagerByMySQL extends BusModBase {
 				try {
 					doLogin(message);
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 					
@@ -95,9 +79,6 @@ public class AuthManagerByMySQL extends BusModBase {
 
 	protected void doLogin(final Message<JsonObject> message)
 			throws Exception {
-		Connection conn = null;
-		Class.forName(JDBC_DRIVER);
-		conn = DriverManager.getConnection(DB_URL+this.database, usernameDB, passwordDB);
 		
 		final String username = getMandatoryString("username", message);
 		if (username == null) {
@@ -107,43 +88,47 @@ public class AuthManagerByMySQL extends BusModBase {
 		if (password == null) {
 			return;
 		}
-		Statement stmt = null;
-		stmt = conn.createStatement();
-		String QUERY = "SELECT * FROM " + this.table + " WHERE username='"
-				+ username + "' AND password='" + password+"'";
+		
+		String QUERY = "SELECT * FROM " + table + " WHERE username='"+username+ "' AND password='"+password+"';";
+		
+		JsonObject findMsg = new JsonObject().putString("action", "raw")
+				.putString("command", QUERY);
+		eb.send(persistorAddress, findMsg, new Handler<Message<JsonObject>>() {
+		      public void handle(Message<JsonObject> reply) {
 
-		ResultSet results = stmt.executeQuery(QUERY);
-		if (results != null) {
-			if(results.next()){
-				LoginInfo info = logins.get(username);
-				if (info != null) {
-					logout(info.sessionID);
-				}
+		        if (reply.body().getString("status").equals("ok")) {
+		          if (reply.body().getArray("results") != null && reply.body().getInteger("rows") == 1) {
+		        	  
+		            // Check if already logged in, if so logout of the old session
+		            LoginInfo info = logins.get(username);
+		            if (info != null) {
+		              logout(info.sessionID);
+		            }
 
-				// Found
-				final String sessionID = UUID.randomUUID().toString();
-				long timerID = vertx.setTimer(sessionTimeout,
-						new Handler<Long>() {
-							public void handle(Long timerID) {
-								sessions.remove(sessionID);
-								logins.remove(username);
-							}
-						});
-				sessions.put(sessionID, username);
-				logins.put(username, new LoginInfo(timerID, sessionID));
-				JsonObject jsonReply = new JsonObject().putString(
-						"sessionID", sessionID);
-				sendOK(message, jsonReply);
-			}else{
-				sendStatus("denied", message);
-			}
-			
-		} else {
-			logger.error("Failed to execute login query");
-			sendError(message, "Failed to excecute login");
-		}
-		stmt.close();
-		conn.close();
+		            // Found
+		            final String sessionID = UUID.randomUUID().toString();
+		            long timerID = vertx.setTimer(sessionTimeout, new Handler<Long>() {
+		              public void handle(Long timerID) {
+		                sessions.remove(sessionID);
+		                logins.remove(username);
+		              }
+		            });
+		            sessions.put(sessionID, username);
+		            logins.put(username, new LoginInfo(timerID, sessionID));
+		            JsonObject jsonReply = new JsonObject().putString("sessionID", sessionID);
+		            sendOK(message, jsonReply);
+		          } else {
+		            // Not found
+		            sendStatus("denied", message);
+		          }
+		        } else {
+		          logger.error("Failed to execute login query: " + reply.body().getString("message"));
+		          sendError(message, "Failed to excecute login");
+		        }
+		      }
+		    });
+		
+		
 	}
 
 	protected void doLogout(final Message<JsonObject> message) {
@@ -187,6 +172,6 @@ public class AuthManagerByMySQL extends BusModBase {
 		}
 	}
 	public static void main(String[] args){
-		System.out.println("Test");
+		System.out.println("Home");
 	}
 }
