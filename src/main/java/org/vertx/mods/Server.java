@@ -25,8 +25,9 @@ public class Server extends Verticle {
 		authConfig.putString("username_db", "root");
 		authConfig.putString("password_db", "JHJD89373");
 		authConfig.putNumber("session_timeout", 900000);
-		
-		
+
+
+
 		JsonObject mysqlConfig = new JsonObject();
 		mysqlConfig.putString("address", "test.mysql");
 		mysqlConfig.putString("database", "auth_db");
@@ -39,7 +40,7 @@ public class Server extends Verticle {
 				JsonObject query = new JsonObject();
 				query.putString("username", "tim");
 				query.putString("password", "foo");
-				
+
 //				query.putString("action", "prepared");
 //				query.putString("statement" , "SELECT * FROM users WHERE username=? AND password=?");
 //				JsonArray array = new JsonArray();
@@ -49,7 +50,12 @@ public class Server extends Verticle {
 				String table = "users";
 				String username = "tim";
 				String password = "foo";
-				String QUERY = "SELECT * FROM " + table + " WHERE username='"+username+ "' AND password='"+password+"';";
+				String configTable = "config";
+				String moduleName = "EM";
+				//String QUERY = "SELECT * FROM " + table + " WHERE username='"+username+ "' AND password='"+password+"';";
+				String QUERY = "SELECT configuration FROM " + table + " INNER JOIN " + configTable + " ON "
+						+ table + ".user_id = " + configTable + ".user_id WHERE " + table + ".password='"
+						+password+"' AND " + table + ".username='"+username+ "' AND module_name='"+moduleName+ "';";
 				
 				JsonObject findMsg = new JsonObject().putString("action", "raw")
 						.putString("command", QUERY);
@@ -59,7 +65,10 @@ public class Server extends Verticle {
 							@Override
 							public void handle(Message<JsonObject> reply) {
 								// TODO Auto-generated method stub
-								body = reply.body().toString();
+								JsonArray obj = reply.body().getArray("results").get(0);
+								body = obj.get(0).toString();
+								JsonObject json = new JsonObject(body);
+								body = json.getString("test", "gogo");
 							}
 						});
 				request.response().end(body);

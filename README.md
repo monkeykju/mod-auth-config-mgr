@@ -10,7 +10,7 @@ This busmod, is used in the web application tutorial to handle simple user/passw
 
 ## Dependencies
 
-This busmod requires a JDBC with MySQL Driver to be running to allow searching for usernames and passwords.
+This busmod requires mod_postgres_mysql to be running to allow searching for usernames and passwords.
 
 ## Name
 
@@ -19,11 +19,24 @@ The module name is `auth-mysql`.
 ## Users table
 Structure of users table in MySQL:
 
-    users(
-        username varchar(50) primary key,
-        password varchar(50)
-    )
-    
+Users table:
+```
+users(
+  user_id int auto_increment primary key,
+  username varchar(50) unique,
+  password varchar(50)
+  );
+```
+Config table:
+```
+config(
+  user_id int,
+  module_name varchar(50),
+  configuration text,
+  primary key(user_id,module_name),
+  foreign key(user_id) references users(user_id)
+  );
+```
 
 ## Configuration
 
@@ -37,9 +50,9 @@ This busmod takes the following configuration:
         "users_table": <users_table>,
         "username": <username_of_mysql>
         "password": <password_of_mysql>
-        "session_timeout": <session_timeout>   
+        "session_timeout": <session_timeout>
     }
-    
+
 For example:
 
     {
@@ -50,9 +63,9 @@ For example:
         "users_table": "users",
         "username": "root",
         "password": "abc123",
-        "session_timeout": 900000 
-    }        
-    
+        "session_timeout": 900000
+    }
+
 Let's take a look at each field in turn:
 
 * `address` The main address for the busmod. Optional field. Default value is `vertx.basicauthmanager`
@@ -79,22 +92,22 @@ The JSON message should have the following structure:
         "username": <username>,
         "password": <password>
     }
-    
+
 If login is successful a reply will be returned:
 
     {
         "status": "ok",
-        "sessionID": <sesson_id>    
+        "sessionID": <sesson_id>
     }
-    
+
 Where `session_id` is a unique session id.
 
 If login is unsuccessful the following reply will be returned:
 
     {
-        "status": "denied"    
+        "status": "denied"
     }
-    
+
 ### Logout
 
 Logout and close a session. Any subsequent attempts to validate the session id will fail.
@@ -105,22 +118,22 @@ The JSON message should have the following structure:
 
     {
         "sessionID": <session_id>
-    }   
-    
-Where `session_id` is a unique session id. 
- 
+    }
+
+Where `session_id` is a unique session id.
+
 If logout is successful the following reply will be returned:
 
     {
-        "status": "ok"    
-    } 
-    
+        "status": "ok"
+    }
+
 Otherwise, if the session id is not known about:
 
     {
-        "status": "error"    
-    }   
-    
+        "status": "error"
+    }
+
 ### Authorise
 
 Authorise a session id.
@@ -131,23 +144,23 @@ The JSON message should have the following structure:
 
     {
         "sessionID": <session_id>
-    }   
-    
-Where `session_id` is a unique session id. 
- 
+    }
+
+Where `session_id` is a unique session id.
+
 If the session is valid the following reply will be returned:
 
     {
         "status": "ok",
-        "username": <username>    
-    } 
-    
-Where `username` is the username of the user.    
-    
+        "username": <username>
+    }
+
+Where `username` is the username of the user.
+
 Otherwise, if the session is not valid. I.e. it has expired or never existed in the first place.
 
     {
-        "status": "denied"    
+        "status": "denied"
     }
 
 With this basic auth manager, the user is always authorised if they are logged in, i.e. there is no fine grained authorisation of resources.
