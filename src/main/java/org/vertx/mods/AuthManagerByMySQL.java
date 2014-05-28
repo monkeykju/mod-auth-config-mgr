@@ -40,7 +40,7 @@ public class AuthManagerByMySQL extends BusModBase {
 	public void start() {
 		super.start();
 		this.address = getOptionalStringConfig("address",
-				"vertx.basicauthmanager");
+				"vertx.auth-conf-mgr");
 		this.table = getOptionalStringConfig("users_table", "users");
 		this.configTable = getOptionalStringConfig("config_table", "config");
 		this.persistorAddress = getOptionalStringConfig("persistor_address",

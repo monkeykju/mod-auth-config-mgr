@@ -11,7 +11,7 @@ import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.platform.Verticle;
 
-public class DemoHttpServer extends Verticle {
+public class SimpleDemo extends Verticle {
 
 	private EventBus eb;
 	public String session = "";

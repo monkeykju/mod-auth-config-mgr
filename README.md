@@ -1,4 +1,4 @@
-# Authentication/Authorisation Manager
+# Authentication/Authorisation and Configuaration Manager
 
 This is a basic auth manager that verifies usernames and passwords in a MySQL database and generates time-limited session ids. These session ids can be passed around the event bus.
 
@@ -10,11 +10,34 @@ This busmod, is used in the web application tutorial to handle simple user/passw
 
 ## Dependencies
 
-This busmod requires mod_postgres_mysql to be running to allow searching for usernames and passwords.
+This busmod requires mod-mysql-postgresql to be running to allow searching for usernames and passwords, mapping config with module-name.
+We need deploy mod-mysql-postgresql with config:
+```
+{
+  "address" : <event-bus-addres-to-listen-on>,
+  "connection" : <MySQL|PostgreSQL>,
+  "host" : <your-host>,
+  "port" : <your-port>,
+  "maxPoolSize" : <maximum-number-of-open-connections>,
+  "username" : <your-username>,
+  "password" : <your-password>,
+  "database" : <name-of-your-database>
+}
+```
+Simple example:
+```
+{
+  "address" : "test.mysql"
+  "database" : "auth_db"
+  "username" : "root"
+  "password" : "abc123"
+  "connection" : "MySQL"
+}
+```
 
 ## Name
 
-The module name is `auth-mysql`.
+The module name is `auth-conf-mgr`.
 
 ## Users table
 Structure of users table in MySQL:
@@ -43,40 +66,30 @@ config(
 This busmod takes the following configuration:
 
     {
-        "address": <address>,
-        "host": <MySQL_host>,
-        "port": <MySQL_port>,
-        "database": <database_of_mysql>,
-        "users_table": <users_table>,
-        "username": <username_of_mysql>
-        "password": <password_of_mysql>
-        "session_timeout": <session_timeout>
+    "address": <address>,
+    "users_table": <user_table_in_mysql>,
+    "config_table": <config_table_in_mysql>,
+    "persistor_address": <mysql_persistor_address>,
+    "session_timeout": <session_timeout>
     }
 
 For example:
 
     {
-       "address": "test.auth",
-        "host": "localhost",
-        "port": "3306",
-        "database": "auth_db",
-        "users_table": "users",
-        "username": "root",
-        "password": "abc123",
-        "session_timeout": 900000
+    "address": "test.auth-conf",
+    "users_table": "users",
+    "config_table": "config",
+    "persistor_address": "test.mysql",
+    "session_timeout": 900000
     }
 
 Let's take a look at each field in turn:
 
-* `address` The main address for the busmod. Optional field. Default value is `vertx.basicauthmanager`
+* `address` The main address for the busmod. Optional field. Default value is `vertx.auth-conf-mgr`
 * `users_table` The MySQL table in which to search for usernames and passwords. Optional field. Default value is `users`.
+* `config_table` The MySQL table in which to search for module users can access. Optional field. Default value is `config`.
 * `session_timeout` Timeout of a session, in milliseconds. This field is optional. Default value is `1800000` (30 minutes).
-* `host` The MySQL host. Default value is `localhost`
-* `port` The port of listening MySQL server. Default value is `3306`
-* `database` The database has the table save information such as username, password. Default is `auth_db`
-* `username` The username of MySQL database. Default value is `root`
-* `password` The password of MySQL database. There is not default value.
-
+* `persistor_address` Busmod address of mysql. Default is `campudus.asyncdbs`.
 
 ## Operations
 
@@ -90,14 +103,16 @@ The JSON message should have the following structure:
 
     {
         "username": <username>,
-        "password": <password>
+        "password": <password>,
+        "module_name": <access_module_name>
     }
 
 If login is successful a reply will be returned:
 
     {
         "status": "ok",
-        "sessionID": <sesson_id>
+        "sessionID": <sesson_id>,
+        "config": <json_config_object>
     }
 
 Where `session_id` is a unique session id.
@@ -143,7 +158,8 @@ To authorise, send a JSON message to the address given by the main address of th
 The JSON message should have the following structure:
 
     {
-        "sessionID": <session_id>
+        "sessionID": <session_id>,
+        "module_name": <access_module_name>
     }
 
 Where `session_id` is a unique session id.
@@ -152,7 +168,8 @@ If the session is valid the following reply will be returned:
 
     {
         "status": "ok",
-        "username": <username>
+        "username": <username>,
+        "config": <json_config_object>
     }
 
 Where `username` is the username of the user.
@@ -162,5 +179,3 @@ Otherwise, if the session is not valid. I.e. it has expired or never existed in 
     {
         "status": "denied"
     }
-
-With this basic auth manager, the user is always authorised if they are logged in, i.e. there is no fine grained authorisation of resources.
