@@ -1,5 +1,7 @@
 package org.vertx.mods;
 
+import org.vertx.java.core.AsyncResult;
+import org.vertx.java.core.AsyncResultHandler;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.EventBus;
 import org.vertx.java.core.eventbus.Message;
@@ -11,49 +13,96 @@ import org.vertx.java.platform.Verticle;
 
 public class DemoHttpServer extends Verticle {
 
-	public EventBus eb;
-	public String body = "hello";
+	private EventBus eb;
+	public String session = "";
+	public String body = "";
 
+	public JsonObject findMsg = new JsonObject().putString("username", "tim")
+			.putString("password", "foo").putString("module_name", "EM");
+	
+	@Override
 	public void start() {
-		HttpServer server = vertx.createHttpServer();
 		eb = vertx.eventBus();
+		JsonObject mysqlConfig = new JsonObject();
+		mysqlConfig.putString("address", "test.mysql");
+		mysqlConfig.putString("database", "auth_db");
+		mysqlConfig.putString("username", "root");
+		mysqlConfig.putString("password", "JHJD89373");
+		mysqlConfig.putString("connection", "MySQL");
+		container.deployModule("io.vertx~mod-mysql-postgresql~0.3.0-SNAPSHOT",
+				mysqlConfig, new AsyncResultHandler<String>() {
 
-		JsonObject authConfig = new JsonObject();
-		authConfig.putString("address", "test.auth");
-		authConfig.putString("users_table", "users");
-		authConfig.putString("database", "auth_db");
-		authConfig.putString("username_db", "root");
-		authConfig.putString("password_db", "JHJD89373");
-		authConfig.putNumber("session_timeout", 900000);
-		container.deployModule("quanns~auth-mysql~0.1.0", authConfig);
-		
+					@Override
+					public void handle(AsyncResult<String> event) {
+						if (event.succeeded()) {
+							JsonObject authConfig = new JsonObject();
+							authConfig.putString("address", "test.auth");
+							authConfig.putString("users_table", "users");
+							authConfig.putString("persistor_address",
+									"test.mysql");
+							authConfig.putString("config_table", "config");
+							authConfig.putNumber("session_timeout", 900000);
+							container.deployModule(
+									"quanns~auth-mysql~0.1.0",
+									authConfig, 1,
+									new AsyncResultHandler<String>() {
+										@Override
+										public void handle(
+												AsyncResult<String> event) {
+											if (event.succeeded()) {
+												// TimeOutTest.super.start();
+												System.out.println("------------------------\n");
+												
+												eb.send("test.auth.login", findMsg,
+														new Handler<Message<JsonObject>>() {
+															@Override
+															public void handle(Message<JsonObject> reply) {
+																System.out.println("------------------------\n");
+																System.out.println(reply.body().toString());
+																session = reply.body().getString("sessionID");	
+																JsonObject authObj = new JsonObject().putString("sessionID", session);
+																authObj.putString("module_name", "Solr");
+																eb.send("test.auth.authorise", authObj,
+																		new Handler<Message<JsonObject>>() {
+																			@Override
+																			public void handle(Message<JsonObject> reply) {
+																				System.out.println(reply.body().toString());
+																				JsonObject authObj = new JsonObject().putString("sessionID", session);
+																				authObj.putString("module_name", "test");
+																				eb.send("test.auth.authorise", authObj,
+																						new Handler<Message<JsonObject>>() {
+																							@Override
+																							public void handle(Message<JsonObject> reply) {
+																								System.out.println(reply.body().toString());
+																								JsonObject authObj = new JsonObject().putString("sessionID", session);
+																								eb.send("test.auth.logout", authObj,
+																										new Handler<Message<JsonObject>>() {
+																											@Override
+																											public void handle(Message<JsonObject> reply) {
+																												System.out.println(reply.body().toString());
+																											}
+																								});
+																							}
+																						});
+																			}
+																		});
+															}
+														});
+												
+											} else {
+												event.cause().printStackTrace();
+											}
+										}
+									});
+						} else {
+							event.cause().printStackTrace();
+						}
 
-		server.requestHandler(new Handler<HttpServerRequest>() {
-			public void handle(HttpServerRequest request) {
-				JsonObject query = new JsonObject();
-				query.putString("username", "tim");
-				query.putString("password", "foo");
+					}
+				});
+			
 				
-//				query.putString("action", "prepared");
-//				query.putString("statement" , "SELECT * FROM users WHERE username=? AND password=?");
-//				JsonArray array = new JsonArray();
-//				array.addString("tim");
-//				array.addString("foo");
-//				query.putArray("values", array);
 				
-				eb.send("test.auth.login", query,
-						new Handler<Message<JsonObject>>() {
-
-							@Override
-							public void handle(Message<JsonObject> reply) {
-								// TODO Auto-generated method stub
-								body = reply.body().toString();
-							}
-						});
-				request.response().end(body);
-			}
-		});
-
-		server.listen(8000, "localhost");
+			
 	}
 }

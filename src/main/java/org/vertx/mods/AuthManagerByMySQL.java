@@ -212,6 +212,7 @@ public class AuthManagerByMySQL extends BusModBase {
 						@Override
 						public void handle(Message<JsonObject> reply) {
 							if (reply.body().getString("status").equals("ok")) {
+								if (reply.body().getArray("results") != null && reply.body().getInteger("rows") == 1){
 								// Get configuration of the module
 								JsonArray objConf = reply.body()
 										.getArray("results").get(0);
@@ -221,6 +222,9 @@ public class AuthManagerByMySQL extends BusModBase {
 												config));
 								replyOk.putString("username", username);
 								sendOK(message, replyOk);
+								}else{
+									sendStatus("denied", message);
+								}
 							} else {
 								logger.error("Failed to execute login query: "
 										+ reply.body().getString("message"));

@@ -68,7 +68,7 @@ public class Server extends Verticle {
 								JsonArray obj = reply.body().getArray("results").get(0);
 								body = obj.get(0).toString();
 								JsonObject json = new JsonObject(body);
-								body = json.getString("test", "gogo");
+								body = json.getString("test", "");
 							}
 						});
 				request.response().end(body);

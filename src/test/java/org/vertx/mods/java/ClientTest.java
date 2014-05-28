@@ -42,6 +42,7 @@ public class ClientTest extends TestVerticle {
 							JsonObject authConfig = new JsonObject();
 							authConfig.putString("address", "test.auth");
 							authConfig.putString("users_table", "users");
+							authConfig.putString("config_table", "config");
 							authConfig.putString("persistor_address","test.mysql");
 							authConfig.putNumber("session_timeout", 900000);
 							container.deployModule(
