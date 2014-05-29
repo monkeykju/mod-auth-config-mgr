@@ -27,7 +27,7 @@ public class SimpleDemo extends Verticle {
 		mysqlConfig.putString("address", "test.mysql");
 		mysqlConfig.putString("database", "auth_db");
 		mysqlConfig.putString("username", "root");
-		mysqlConfig.putString("password", "JHJD89373");
+		mysqlConfig.putString("password", "abc123");
 		mysqlConfig.putString("connection", "MySQL");
 		container.deployModule("io.vertx~mod-mysql-postgresql~0.3.0-SNAPSHOT",
 				mysqlConfig, new AsyncResultHandler<String>() {
