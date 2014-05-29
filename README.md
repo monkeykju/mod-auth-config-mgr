@@ -10,8 +10,8 @@ This busmod, is used in the web application tutorial to handle simple user/passw
 
 ## Dependencies
 
-This busmod requires mod-mysql-postgresql to be running to allow searching for usernames and passwords, mapping config with module-name.
-We need deploy mod-mysql-postgresql with config:
+This busmod requires `mod-mysql-postgresql` to be running to allow searching for usernames and passwords, mapping config with module-name.
+We need deploy `mod-mysql-postgresql` with config:
 ```
 {
   "address" : <event-bus-addres-to-listen-on>,
