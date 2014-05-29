@@ -5,9 +5,6 @@ import org.vertx.java.core.AsyncResultHandler;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.EventBus;
 import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.http.HttpServer;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.platform.Verticle;
 
@@ -18,7 +15,7 @@ public class SimpleDemo extends Verticle {
 	public String body = "";
 
 	public JsonObject findMsg = new JsonObject().putString("username", "tim")
-			.putString("password", "foo").putString("module_name", "EM");
+			.putString("password", "foo").putString("module_name", "II");
 	
 	@Override
 	public void start() {
@@ -43,7 +40,7 @@ public class SimpleDemo extends Verticle {
 							authConfig.putString("config_table", "config");
 							authConfig.putNumber("session_timeout", 900000);
 							container.deployModule(
-									"quanns~auth-mysql~0.1.0",
+									"dsvn~auth-config-mgr~0.1.0",
 									authConfig, 1,
 									new AsyncResultHandler<String>() {
 										@Override
@@ -61,14 +58,14 @@ public class SimpleDemo extends Verticle {
 																System.out.println(reply.body().toString());
 																session = reply.body().getString("sessionID");	
 																JsonObject authObj = new JsonObject().putString("sessionID", session);
-																authObj.putString("module_name", "Solr");
+																authObj.putString("module_name", "II");
 																eb.send("test.auth.authorise", authObj,
 																		new Handler<Message<JsonObject>>() {
 																			@Override
 																			public void handle(Message<JsonObject> reply) {
 																				System.out.println(reply.body().toString());
 																				JsonObject authObj = new JsonObject().putString("sessionID", session);
-																				authObj.putString("module_name", "test");
+																				authObj.putString("module_name", "EM");
 																				eb.send("test.auth.authorise", authObj,
 																						new Handler<Message<JsonObject>>() {
 																							@Override

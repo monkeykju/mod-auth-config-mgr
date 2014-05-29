@@ -5,6 +5,8 @@ import static org.vertx.testtools.VertxAssert.assertEquals;
 //import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.vertx.java.core.AsyncResult;
 import org.vertx.java.core.AsyncResultHandler;
@@ -39,6 +41,7 @@ public class TimeOutTest extends TestVerticle {
 							JsonObject authConfig = new JsonObject();
 							authConfig.putString("address", "test.auth");
 							authConfig.putString("users_table", "users");
+							authConfig.putString("config_table", "config");
 							authConfig.putString("persistor_address","test.mysql");
 							authConfig.putNumber("session_timeout", 200);
 							container.deployModule(
@@ -48,7 +51,7 @@ public class TimeOutTest extends TestVerticle {
 										@Override
 										public void handle(
 												AsyncResult<String> event) {
-											if (event.succeeded()) {
+											if (event.succeeded()) {							
 												TimeOutTest.super.start();
 											} else {
 												event.cause().printStackTrace();
@@ -63,22 +66,47 @@ public class TimeOutTest extends TestVerticle {
 				});
 	}
 
-	public void deleteAll() throws Exception {
+	@Test
+	public void testSession() throws Exception {
 
-		String command = "truncate users;";
 		JsonObject json = new JsonObject();
+		
+		String command2 = "truncate config;";
+		
 		json.putString("action", "raw");
-		json.putString("command", command);
+		json.putString("command", command2);
 		eb.send("test.mysql", json, new Handler<Message<JsonObject>>() {
 			@Override
 			public void handle(Message<JsonObject> reply) {				
 				assertEquals("ok", reply.body().getString("status"));
 				//testComplete();
+				String command = "DELETE FROM users";
+				JsonObject json = new JsonObject();
+				json.putString("action", "raw");
+				json.putString("command", command);
+				eb.send("test.mysql", json, new Handler<Message<JsonObject>>() {
+					@Override
+					public void handle(Message<JsonObject> reply) {		
+						System.out.println(reply.body().toString());
+						assertEquals("ok", reply.body().getString("status"));
+						try {
+							storeEntries("tim", "foo");
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+						//testComplete();
+					}
+				});
+				
 			}
 		});
+		
+		//String command = "truncate users;";
+		
 
 	}
 
+	
 	public void storeEntries(String username, String password) throws Exception {
 		JsonObject json2 = new JsonObject();
 		json2.putString("action", "insert");
@@ -91,21 +119,42 @@ public class TimeOutTest extends TestVerticle {
 		eb.send("test.mysql", json2, new Handler<Message<JsonObject>>() {
 			@Override
 			public void handle(Message<JsonObject> reply) {
+				System.out.println(reply.body().toString());
 				assertEquals("ok", reply.body().getString("status"));
+				storeMoudle("tim", "II", "{\"access\":\"ok\"}");
 				//testComplete();
 			}
 		});
 	}
+	
+	public void storeMoudle(String username, String moduleName, String config){
+		//insert into config(user_id,module_name,configuration) values ((select user_id from users where username="tim"),"II","{\"test\":\"ok\"}");
+		String command = "INSERT INTO config(user_id,module_name,configuration) values (( SELECT user_id FROM users WHERE username='"
+				+username+"'),'"+moduleName+"','"+config+"');";
+		JsonObject json2 = new JsonObject();
+		json2.putString("action", "raw");
+		json2.putString("command", command);
+		eb.send("test.mysql", json2, new Handler<Message<JsonObject>>() {
+			@Override
+			public void handle(Message<JsonObject> reply) {
+				System.out.println(reply.body().toString());
+				assertEquals("ok", reply.body().getString("status"));
+				try {
+					testSessionTimeout();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				//testComplete();
+			}
+		});
+		
+	}
 
-	@Test
 	public void testSessionTimeout() throws Exception {
-		deleteAll();
-		storeEntries("tim","foo");
-		//createTable();
 		JsonObject json = new JsonObject();
 		json.putString("username", "tim");
 		json.putString("password", "foo");
-		//storeEntries("tim","foo");
+		json.putString("module_name", "II");
 		eb.send("test.auth.login", json, new Handler<Message<JsonObject>>() {
 			@Override
 			public void handle(Message<JsonObject> reply) {
@@ -115,7 +164,7 @@ public class TimeOutTest extends TestVerticle {
 				session = reply.body().getString("sessionID");
 				JsonObject authObj = new JsonObject();
 				authObj.putString("sessionID", session);
-				authObj.putString("password", "foo");
+				authObj.putString("module_name", "II");
 				eb.send("test.auth.authorise", authObj,
 						new Handler<Message<JsonObject>>() {
 							@Override
@@ -129,7 +178,7 @@ public class TimeOutTest extends TestVerticle {
 										JsonObject authObj = new JsonObject();
 										authObj.putString("sessionID", session);
 
-										authObj.putString("password", "foo");
+										authObj.putString("module_name", "II");
 
 										eb.send("test.auth.authorise",authObj,
 												new Handler<Message<JsonObject>>() {

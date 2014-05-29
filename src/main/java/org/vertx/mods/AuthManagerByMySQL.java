@@ -1,6 +1,5 @@
 package org.vertx.mods;
 
-import java.awt.JobAttributes;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;

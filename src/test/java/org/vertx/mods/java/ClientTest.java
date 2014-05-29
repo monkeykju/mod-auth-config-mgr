@@ -238,6 +238,7 @@ public class ClientTest extends TestVerticle {
 
 			@Override
 			public void handle(Message<JsonObject> reply) {
+				System.out.println(reply.body().toString());
 				assertEquals("denied", reply.body().getString("status"));
 				testComplete();
 			}
