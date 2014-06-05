@@ -19,14 +19,14 @@ public class SimpleDemo extends Verticle {
 	
 	@Override
 	public void start() {
-		eb = vertx.eventBus();
+		this.setEb(this.vertx.eventBus());
 		JsonObject mysqlConfig = new JsonObject();
 		mysqlConfig.putString("address", "test.mysql");
 		mysqlConfig.putString("database", "auth_db");
 		mysqlConfig.putString("username", "root");
 		mysqlConfig.putString("password", "abc123");
 		mysqlConfig.putString("connection", "MySQL");
-		container.deployModule("io.vertx~mod-mysql-postgresql~0.3.0-SNAPSHOT",
+		this.container.deployModule("io.vertx~mod-mysql-postgresql~0.3.0-SNAPSHOT",
 				mysqlConfig, new AsyncResultHandler<String>() {
 
 					@Override
@@ -35,48 +35,44 @@ public class SimpleDemo extends Verticle {
 							JsonObject authConfig = new JsonObject();
 							authConfig.putString("address", "test.auth");
 							authConfig.putString("users_table", "users");
-							authConfig.putString("persistor_address",
-									"test.mysql");
+							authConfig.putString("persistor_address","test.mysql");
 							authConfig.putString("config_table", "config");
 							authConfig.putNumber("session_timeout", 900000);
-							container.deployModule(
-									"dsvn~auth-config-mgr~0.1.0",
-									authConfig, 1,
+							SimpleDemo.this.getContainer().deployModule("dsvn~auth-config-mgr~0.1.0",authConfig, 1,
 									new AsyncResultHandler<String>() {
 										@Override
 										public void handle(
-												AsyncResult<String> event) {
-											if (event.succeeded()) {
-												// TimeOutTest.super.start();
+												AsyncResult<String> event1) {
+											if (event1.succeeded()) {
 												System.out.println("------------------------\n");
 												
-												eb.send("test.auth.login", findMsg,
+												SimpleDemo.this.getEb().send("test.auth.login", SimpleDemo.this.findMsg,
 														new Handler<Message<JsonObject>>() {
 															@Override
 															public void handle(Message<JsonObject> reply) {
 																System.out.println("------------------------\n");
 																System.out.println(reply.body().toString());
-																session = reply.body().getString("sessionID");	
-																JsonObject authObj = new JsonObject().putString("sessionID", session);
+																SimpleDemo.this.session = reply.body().getString("sessionID");	
+																JsonObject authObj = new JsonObject().putString("sessionID", SimpleDemo.this.session);
 																authObj.putString("module_name", "II");
-																eb.send("test.auth.authorise", authObj,
+																getEb().send("test.auth.authorise", authObj,
 																		new Handler<Message<JsonObject>>() {
 																			@Override
-																			public void handle(Message<JsonObject> reply) {
-																				System.out.println(reply.body().toString());
-																				JsonObject authObj = new JsonObject().putString("sessionID", session);
-																				authObj.putString("module_name", "EM");
-																				eb.send("test.auth.authorise", authObj,
+																			public void handle(Message<JsonObject> reply1) {
+																				System.out.println(reply1.body().toString());
+																				JsonObject authObj1 = new JsonObject().putString("sessionID", SimpleDemo.this.session);
+																				authObj1.putString("module_name", "EM");
+																				getEb().send("test.auth.authorise", authObj1,
 																						new Handler<Message<JsonObject>>() {
 																							@Override
-																							public void handle(Message<JsonObject> reply) {
-																								System.out.println(reply.body().toString());
-																								JsonObject authObj = new JsonObject().putString("sessionID", session);
-																								eb.send("test.auth.logout", authObj,
+																							public void handle(Message<JsonObject> reply2) {
+																								System.out.println(reply2.body().toString());
+																								JsonObject authObj2 = new JsonObject().putString("sessionID", SimpleDemo.this.session);
+																								getEb().send("test.auth.logout", authObj2,
 																										new Handler<Message<JsonObject>>() {
 																											@Override
-																											public void handle(Message<JsonObject> reply) {
-																												System.out.println(reply.body().toString());
+																											public void handle(Message<JsonObject> reply3) {
+																												System.out.println(reply3.body().toString());
 																											}
 																								});
 																							}
@@ -87,7 +83,7 @@ public class SimpleDemo extends Verticle {
 														});
 												
 											} else {
-												event.cause().printStackTrace();
+												event1.cause().printStackTrace();
 											}
 										}
 									});
@@ -101,5 +97,13 @@ public class SimpleDemo extends Verticle {
 				
 				
 			
+	}
+
+	public EventBus getEb() {
+		return this.eb;
+	}
+
+	public void setEb(EventBus eb) {
+		this.eb = eb;
 	}
 }
