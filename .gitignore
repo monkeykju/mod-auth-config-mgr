@@ -20,3 +20,4 @@ test-results
 test-tmp
 *.class
 /mods
+src/main/java/org/vertx/mods/Server.java

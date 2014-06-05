@@ -30,12 +30,13 @@ public class AuthManagerByMySQL extends BusModBase {
 		final long timerID;
 		final String sessionID;
 
-		private LoginInfo(long timerID, String sessionID) {
+		LoginInfo(long timerID, String sessionID) {
 			this.timerID = timerID;
 			this.sessionID = sessionID;
 		}
 	}
 
+	@Override
 	public void start() {
 		super.start();
 		this.address = getOptionalStringConfig("address",
@@ -44,18 +45,19 @@ public class AuthManagerByMySQL extends BusModBase {
 		this.configTable = getOptionalStringConfig("config_table", "config");
 		this.persistorAddress = getOptionalStringConfig("persistor_address",
 				"campudus.asyncdbs");
-		Number timeout = config.getNumber("session_timeout");
+		Number timeout = this.config.getNumber("session_timeout");
 		if (timeout != null) {
 			if (timeout instanceof Long) {
-				this.sessionTimeout = (Long) timeout;
+				this.setSessionTimeout((Long) timeout);
 			} else if (timeout instanceof Integer) {
-				this.sessionTimeout = (Integer) timeout;
+				this.setSessionTimeout((Integer) timeout);
 			}
 		} else {
-			this.sessionTimeout = DEFAULT_SESSION_TIMEOUT;
+			this.setSessionTimeout(DEFAULT_SESSION_TIMEOUT);
 		}
 
-		loginHandler = new Handler<Message<JsonObject>>() {
+		this.loginHandler = new Handler<Message<JsonObject>>() {
+			@Override
 			public void handle(Message<JsonObject> message) {
 
 				try {
@@ -66,19 +68,23 @@ public class AuthManagerByMySQL extends BusModBase {
 
 			}
 		};
-		eb.registerHandler(address + ".login", loginHandler);
-		logoutHandler = new Handler<Message<JsonObject>>() {
+		this.eb.registerHandler(this.address + ".login", this.loginHandler);
+		
+		this.logoutHandler = new Handler<Message<JsonObject>>() {
+			@Override
 			public void handle(Message<JsonObject> message) {
 				doLogout(message);
 			}
-		};
-		eb.registerHandler(address + ".logout", logoutHandler);
-		authoriseHandler = new Handler<Message<JsonObject>>() {
+		};		
+		this.eb.registerHandler(this.address + ".logout", this.logoutHandler);
+		
+		this.authoriseHandler = new Handler<Message<JsonObject>>() {
+			@Override
 			public void handle(Message<JsonObject> message) {
 				doAuthorise(message);
 			}
 		};
-		eb.registerHandler(address + ".authorise", authoriseHandler);
+		this.eb.registerHandler(this.address + ".authorise", this.authoriseHandler);
 	}
 
 	protected void doLogin(final Message<JsonObject> message) throws Exception {
@@ -100,15 +106,17 @@ public class AuthManagerByMySQL extends BusModBase {
 		// String QUERY = "SELECT * FROM " + table +
 		// " WHERE username='"+username+ "' AND password='"+password+"';";
 
-		String QUERY = "SELECT configuration FROM " + table + " INNER JOIN "
-				+ configTable + " ON " + table + ".user_id = " + configTable
-				+ ".user_id WHERE " + table + ".password='" + password
-				+ "' AND " + table + ".username='" + username
+		String QUERY = "SELECT configuration FROM " + this.table + " INNER JOIN "
+				+ this.configTable + " ON " + this.table + ".user_id = " + this.configTable
+				+ ".user_id WHERE " + this.table + ".password='" + password
+				+ "' AND " + this.table + ".username='" + username
 				+ "' AND module_name='" + moduleName + "';";
 
 		JsonObject findMsg = new JsonObject().putString("action", "raw")
 				.putString("command", QUERY);
-		eb.send(persistorAddress, findMsg, new Handler<Message<JsonObject>>() {
+		this.eb.send(this.persistorAddress, findMsg, new Handler<Message<JsonObject>>() {
+			@SuppressWarnings("synthetic-access")
+			@Override
 			public void handle(Message<JsonObject> reply) {
 
 				if (reply.body().getString("status").equals("ok")) {
@@ -116,38 +124,38 @@ public class AuthManagerByMySQL extends BusModBase {
 							&& reply.body().getInteger("rows") == 1) {
 
 						// Get configuration of the module
-						JsonArray objConf = reply.body().getArray("results")
-								.get(0);
-						String config = objConf.get(0).toString();
+						JsonArray objConf = reply.body().getArray("results").get(0);
+						String configuration = objConf.get(0).toString();
 
 						// Check if already logged in, if so logout of the old
 						// session
-						LoginInfo info = logins.get(username);
+						LoginInfo info = AuthManagerByMySQL.this.logins.get(username);
 						if (info != null) {
 							logout(info.sessionID);
 						}
 
 						// Found
 						final String sessionID = UUID.randomUUID().toString();
-						long timerID = vertx.setTimer(sessionTimeout,
+						long timerID = AuthManagerByMySQL.this.getVertx().setTimer(AuthManagerByMySQL.this.getSessionTimeout(),
 								new Handler<Long>() {
-									public void handle(Long timerID) {
-										sessions.remove(sessionID);
-										logins.remove(username);
+									@Override
+									public void handle(Long timerID1) {
+										AuthManagerByMySQL.this.sessions.remove(sessionID);
+										AuthManagerByMySQL.this.logins.remove(username);
 									}
 								});
-						sessions.put(sessionID, username);
-						logins.put(username, new LoginInfo(timerID, sessionID));
+						AuthManagerByMySQL.this.sessions.put(sessionID, username);
+						AuthManagerByMySQL.this.logins.put(username, new LoginInfo(timerID, sessionID));
 						JsonObject jsonReply = new JsonObject().putString(
 								"sessionID", sessionID);
-						jsonReply.putObject("config", new JsonObject(config));
+						jsonReply.putObject("config", new JsonObject(configuration));
 						sendOK(message, jsonReply);
 					} else {
 						// Not found
 						sendStatus("denied", message);
 					}
 				} else {
-					logger.error("Failed to execute login query: "
+					AuthManagerByMySQL.this.logger.error("Failed to execute login query: "
 							+ reply.body().getString("message"));
 					sendError(message, "Failed to excecute login");
 				}
@@ -168,14 +176,13 @@ public class AuthManagerByMySQL extends BusModBase {
 	}
 
 	protected boolean logout(String sessionID) {
-		String username = sessions.remove(sessionID);
+		String username = this.sessions.remove(sessionID);
 		if (username != null) {
-			LoginInfo info = logins.remove(username);
-			vertx.cancelTimer(info.timerID);
+			LoginInfo info = this.logins.remove(username);
+			this.vertx.cancelTimer(info.timerID);
 			return true;
-		} else {
-			return false;
 		}
+		return false;
 	}
 
 	protected void doAuthorise(final Message<JsonObject> message) {
@@ -189,25 +196,26 @@ public class AuthManagerByMySQL extends BusModBase {
 			return;
 		}
 
-		final String username = sessions.get(sessionID);
+		final String username = this.sessions.get(sessionID);
 
 		// In this basic auth manager we don't do any resource specific
 		// authorisation
 		// The user is always authorised if they are logged in
 
 		if (username != null) {
-			String QUERY = "SELECT configuration FROM " + table
-					+ " INNER JOIN " + configTable + " ON " + table
-					+ ".user_id = " + configTable + ".user_id WHERE " + table
+			String QUERY = "SELECT configuration FROM " + this.table
+					+ " INNER JOIN " + this.configTable + " ON " + this.table
+					+ ".user_id = " + this.configTable + ".user_id WHERE " + this.table
 					+ ".username='" + username + "' AND module_name='"
 					+ moduleName + "';";
 
 			JsonObject findMsg = new JsonObject().putString("action", "raw")
 					.putString("command", QUERY);
 
-			eb.send(persistorAddress, findMsg,
+			this.eb.send(this.persistorAddress, findMsg,
 					new Handler<Message<JsonObject>>() {
 
+						@SuppressWarnings("synthetic-access")
 						@Override
 						public void handle(Message<JsonObject> reply) {
 							if (reply.body().getString("status").equals("ok")) {
@@ -215,17 +223,17 @@ public class AuthManagerByMySQL extends BusModBase {
 								// Get configuration of the module
 								JsonArray objConf = reply.body()
 										.getArray("results").get(0);
-								String config = objConf.get(0).toString();
+								String configuration = objConf.get(0).toString();
 								JsonObject replyOk = new JsonObject()
 										.putObject("config", new JsonObject(
-												config));
+												configuration));
 								replyOk.putString("username", username);
 								sendOK(message, replyOk);
 								}else{
 									sendStatus("denied", message);
 								}
 							} else {
-								logger.error("Failed to execute login query: "
+								AuthManagerByMySQL.this.logger.error("Failed to execute login query: "
 										+ reply.body().getString("message"));
 								sendError(message, "Failed to excecute login");
 							}
@@ -237,7 +245,11 @@ public class AuthManagerByMySQL extends BusModBase {
 		}
 	}
 
-	public static void main(String[] args) {
-		System.out.println("Home");
+	public long getSessionTimeout() {
+		return this.sessionTimeout;
+	}
+
+	public void setSessionTimeout(long sessionTimeout) {
+		this.sessionTimeout = sessionTimeout;
 	}
 }
