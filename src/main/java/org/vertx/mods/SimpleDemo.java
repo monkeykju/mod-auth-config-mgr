@@ -28,7 +28,6 @@ public class SimpleDemo extends Verticle {
 		mysqlConfig.putString("connection", "MySQL");
 		this.container.deployModule("io.vertx~mod-mysql-postgresql~0.3.0-SNAPSHOT",
 				mysqlConfig, new AsyncResultHandler<String>() {
-
 					@Override
 					public void handle(AsyncResult<String> event) {
 						if (event.succeeded()) {
@@ -92,11 +91,7 @@ public class SimpleDemo extends Verticle {
 						}
 
 					}
-				});
-			
-				
-				
-			
+				});		
 	}
 
 	public EventBus getEb() {

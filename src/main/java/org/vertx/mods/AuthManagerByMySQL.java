@@ -39,12 +39,10 @@ public class AuthManagerByMySQL extends BusModBase {
 	@Override
 	public void start() {
 		super.start();
-		this.address = getOptionalStringConfig("address",
-				"vertx.auth-conf-mgr");
+		this.address = getOptionalStringConfig("address","vertx.auth-conf-mgr");
 		this.table = getOptionalStringConfig("users_table", "users");
 		this.configTable = getOptionalStringConfig("config_table", "config");
-		this.persistorAddress = getOptionalStringConfig("persistor_address",
-				"campudus.asyncdbs");
+		this.persistorAddress = getOptionalStringConfig("persistor_address","campudus.asyncdbs");
 		Number timeout = this.config.getNumber("session_timeout");
 		if (timeout != null) {
 			if (timeout instanceof Long) {
@@ -206,8 +204,7 @@ public class AuthManagerByMySQL extends BusModBase {
 			String QUERY = "SELECT configuration FROM " + this.table
 					+ " INNER JOIN " + this.configTable + " ON " + this.table
 					+ ".user_id = " + this.configTable + ".user_id WHERE " + this.table
-					+ ".username='" + username + "' AND module_name='"
-					+ moduleName + "';";
+					+ ".username='" + username + "' AND module_name='" + moduleName + "';";
 
 			JsonObject findMsg = new JsonObject().putString("action", "raw")
 					.putString("command", QUERY);
